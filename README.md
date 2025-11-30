@@ -3,11 +3,9 @@
 
 This project is a cloud-native RESTful API designed for a fictitious Mobile Provider system. It allows subscribers to query bills, make payments, and enables admins to manage billing records via single or batch operations.
 
-## 🔗 Project Links
-- **Source Code:** [GITHUB_LINKINI_BURAYA_YAPISTIR]
-- **Live Swagger Documentation:** https://se4458-api-405686366356.europe-west3.run.app/api-docs
-- **Demo Video:** [VIDEO_LINKINI_BURAYA_YAPISTIR]
+## 🔗 Project Links:
 
+- **Live Swagger Documentation:** https://se4458-api-405686366356.europe-west3.run.app/api-docs
 ---
 
 ## 🏗️ System Design & Architecture
