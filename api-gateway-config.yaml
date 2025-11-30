@@ -1,0 +1,163 @@
+swagger: '2.0'
+info:
+  title: Mobile Provider Bill Payment API Gateway
+  description: API Gateway for SE 4458 Project
+  version: 1.0.0
+schemes:
+  - https
+produces:
+  - application/json
+
+# 1. Authentication definition
+securityDefinitions:
+  api_key:
+    type: "apiKey"
+    name: "key"
+    in: "query"
+
+# 2. Quota definition for Rate Limiting
+# This is the total quota limitation which is 100. The rate limiting for 
+# the intended endpoints defined in the backend code.
+x-google-management:
+  metrics:
+    - name: "bill-queries"
+      displayName: "Bill Query Counter"
+      valueType: INT64
+      metricKind: DELTA
+  quota:
+    limits:
+      - name: "query-limit"
+        metric: "bill-queries"
+        unit: "1/min/{project}"
+        values:
+          STANDARD: 100
+
+paths:
+  # --- Yes Auth Yes Rate Limiting ---
+  /api/v1/bills/query:
+    post:
+      summary: Query Bill
+      operationId: queryBill
+      x-google-backend:
+        address: https://se4458-api-405686366356.europe-west3.run.app/api/v1/bills/query
+        deadline: 15.0
+      security:
+        - api_key: []
+      x-google-quota:
+        metricCosts:
+          "bill-queries": 1
+      responses:
+        '200':
+          description: OK
+    options:
+      operationId: queryBillCors
+      x-google-backend:
+        address: https://se4458-api-405686366356.europe-west3.run.app/api/v1/bills/query
+      responses:
+        '200':
+          description: OK
+
+  # --- Yes Auth Yes Rate Limiting ---
+  /api/v1/bills/query-detailed:
+    post:
+      summary: Query Bill Detailed
+      operationId: queryBillDetailed
+      x-google-backend:
+        address: https://se4458-api-405686366356.europe-west3.run.app/api/v1/bills/query-detailed
+      security:
+        - api_key: []
+      x-google-quota:
+        metricCosts:
+          "bill-queries": 1
+      responses:
+        '200':
+          description: OK
+    options:
+      operationId: queryBillDetailedCors
+      x-google-backend:
+        address: https://se4458-api-405686366356.europe-west3.run.app/api/v1/bills/query-detailed
+      responses:
+        '200':
+          description: OK
+
+  # --- Yes Auth No Rate Limiting ---
+  /api/v1/bills/banking/query:
+    post:
+      summary: Banking Query
+      operationId: bankingQuery
+      x-google-backend:
+        address: https://se4458-api-405686366356.europe-west3.run.app/api/v1/bills/banking/query
+      security:
+        - api_key: []
+      x-google-quota:
+        metricCosts:
+          "bill-queries": 1
+      responses:
+        '200':
+          description: OK
+    options:
+      operationId: bankingQueryCors
+      x-google-backend:
+        address: https://se4458-api-405686366356.europe-west3.run.app/api/v1/bills/banking/query
+      responses:
+        '200':
+          description: OK
+
+  # --- Yes Auth No Rate Limiting ---
+  /api/v1/bills/admin/add:
+    post:
+      summary: Admin Add Bill
+      operationId: adminAdd
+      x-google-backend:
+        address: https://se4458-api-405686366356.europe-west3.run.app/api/v1/bills/admin/add
+      security:
+        - api_key: []
+      responses:
+        '200':
+          description: OK
+    options:
+      operationId: adminAddCors
+      x-google-backend:
+        address: https://se4458-api-405686366356.europe-west3.run.app/api/v1/bills/admin/add
+      responses:
+        '200':
+          description: OK
+
+  # --- No Auth No Rate Limiting ---
+  /api/v1/bills/admin/batch-upload:
+    post:
+      summary: Batch Upload
+      operationId: batchUpload
+      x-google-backend:
+        address: https://se4458-api-405686366356.europe-west3.run.app/api/v1/bills/admin/batch-upload
+        deadline: 60.0 
+      security:
+        - api_key: []
+      responses:
+        '200':
+          description: OK
+    options:
+      operationId: batchUploadCors
+      x-google-backend:
+        address: https://se4458-api-405686366356.europe-west3.run.app/api/v1/bills/admin/batch-upload
+      responses:
+        '200':
+          description: OK
+
+  # --- Yes Auth No Rate Limiting ---
+  /api/v1/bills/pay:
+    post:
+      summary: Pay Bill
+      operationId: payBill
+      x-google-backend:
+        address: https://se4458-api-405686366356.europe-west3.run.app/api/v1/bills/pay
+      responses:
+        '200':
+          description: OK
+    options:
+      operationId: payBillCors
+      x-google-backend:
+        address: https://se4458-api-405686366356.europe-west3.run.app/api/v1/bills/pay
+      responses:
+        '200':
+          description: OK

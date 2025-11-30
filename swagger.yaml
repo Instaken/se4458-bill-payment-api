@@ -1,0 +1,222 @@
+swagger: '2.0'
+info:
+  version: '1.0.0'
+  title: Mobile Provider Bill Payment API
+  description: |
+    SE 4458 Midterm Project - Group 1
+    
+    **Features:**
+    - API Gateway Integrated
+    - Authentication: API Key required
+    - Rate Limiting (Quota): 100 requests/min (DDoS Protection)
+    - Business Logic Limit: 3 queries/day per subscriber
+# ---------------------------------------------------------
+# API Gateway Host
+host: se4458-gateway-56db6ro4.ew.gateway.dev
+# ---------------------------------------------------------
+
+basePath: /api/v1
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+
+
+securityDefinitions:
+  api_key:
+    type: "apiKey"
+    name: "key"
+    in: "query"
+
+
+x-google-management:
+  metrics:
+    - name: "bill-queries"
+      displayName: "Bill Query Counter"
+      valueType: INT64
+      metricKind: DELTA
+  quota:
+    limits:
+      - name: "query-limit"
+        metric: "bill-queries"
+        unit: "1/min/{project}"
+        values:
+          STANDARD: 100
+
+paths:
+  /bills/query:
+    post:
+      summary: Query Bill Amount (Mobile)
+      description: Rate Limited (100/min) & Auth Required
+      operationId: queryBill
+      security: 
+        - api_key: []
+      x-google-quota:
+        metricCosts:
+          "bill-queries": 1
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required:
+              - subscriberNo
+              - month
+            properties:
+              subscriberNo:
+                type: string
+                example: "5321234567"
+              month:
+                type: string
+                example: "2024-11"
+      responses:
+        200:
+          description: Successful query
+        401:
+          description: Unauthorized
+        429:
+          description: Quota/Limit Exceeded
+
+  /bills/query-detailed:
+    post:
+      summary: Query Bill Detailed (Mobile)
+      description: Rate Limited (100/min) & Auth Required
+      operationId: queryBillDetailed
+      security: 
+        - api_key: []
+      x-google-quota:
+        metricCosts:
+          "bill-queries": 1
+      parameters:
+        - in: query
+          name: page
+          type: integer
+          default: 1
+        - in: query
+          name: limit
+          type: integer
+          default: 10
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required:
+              - subscriberNo
+              - month
+            properties:
+              subscriberNo:
+                type: string
+                example: "5321234567"
+              month:
+                type: string
+                example: "2024-11"
+      responses:
+        200:
+          description: Detailed info
+
+  /bills/banking/query:
+    post:
+      summary: Query Unpaid Bills (Banking)
+      operationId: listUnpaidBills
+      security: 
+        - api_key: []
+      x-google-quota:
+        metricCosts:
+          "bill-queries": 1
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required:
+              - subscriberNo
+            properties:
+              subscriberNo:
+                type: string
+                example: "5321234567"
+      responses:
+        200:
+          description: List of unpaid bills
+
+  /bills/admin/add:
+    post:
+      summary: Add Single Bill (Admin)
+      operationId: addBill
+      security: 
+        - api_key: []
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required:
+              - subscriberNo
+              - month
+              - amount
+            properties:
+              subscriberNo:
+                type: string
+                example: "5321234567"
+              month:
+                type: string
+                example: "2024-12"
+              amount:
+                type: number
+                example: 100.0
+              details:
+                type: object
+      responses:
+        200:
+          description: Bill added
+
+  /bills/admin/batch-upload:
+    post:
+      summary: Batch Upload Bills (Admin)
+      operationId: uploadBatchBills
+      security: 
+        - api_key: []
+      consumes:
+        - multipart/form-data
+      parameters:
+        - in: formData
+          name: file
+          type: file
+          required: true
+      responses:
+        200:
+          description: Processed
+
+  /bills/pay:
+    post:
+      summary: Pay Bill (Web - No Auth)
+      description: Public endpoint. No Auth, No Rate Limit.
+      operationId: payBill
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required:
+              - subscriberNo
+              - month
+              - paymentAmount
+            properties:
+              subscriberNo:
+                type: string
+                example: "5321234567"
+              month:
+                type: string
+                example: "2024-11"
+              paymentAmount:
+                type: number
+                example: 50.0
+      responses:
+        200:
+          description: Payment successful
