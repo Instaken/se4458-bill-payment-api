@@ -11,6 +11,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Serve static files (Chat UI)
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Logging Middleware
 app.use(morgan((tokens, req, res) => {
@@ -48,16 +50,24 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 const mobileProviderRoutes = require('./routes/mobileProviderRoutes');
 const bankingRoutes = require('./routes/bankingRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+const authMiddleware = require('./middleware/authMiddleware');
+
+// Apply Auth Middleware to all API routes
+app.use('/api/v1', authMiddleware);
 
 app.use('/api/v1/bills', mobileProviderRoutes);
 app.use('/api/v1/bills', bankingRoutes);
 app.use('/api/v1/bills', adminRoutes);
 
+// Chat Route (Optional: Protected or Public? User requested "API_KEY to add auth to endpoints")
+// Let's protect it too for consistency, or the UI won't work easily without the key.
+// But the UI is static HTML.
+app.use('/chat', authMiddleware, chatRoutes);
+
 app.get('/', (req, res) => {
-    res.status(200).json({
-        message: 'SE 4458 Mobile Provider API is running!',
-        docs: '/api-docs'
-    });
+    // Send the Chat UI file
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 module.exports = app;
