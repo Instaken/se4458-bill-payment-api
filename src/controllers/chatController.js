@@ -82,11 +82,41 @@ const model = genAI.getGenerativeModel({
     ]
 });
 
+const getTodayDate = () => new Date().toISOString().split('T')[0];
+
+const checkRateLimit = async (subscriberNo) => {
+    const subRef = db.collection('subscribers').doc(subscriberNo);
+    const subDoc = await subRef.get();
+    const today = getTodayDate();
+
+    if (!subDoc.exists) {
+        await subRef.set({ subscriberNo, lastQueryDate: today, dailyQueryCount: 1 });
+    } else {
+        const data = subDoc.data();
+        const lastDate = data.lastQueryDate || "";
+        const count = data.dailyQueryCount || 0;
+
+        if (lastDate !== today) {
+            await subRef.update({ lastQueryDate: today, dailyQueryCount: 1 });
+        } else {
+            if (count >= 3) {
+                return { error: "Daily query limit exceeded. You cannot query more than 3 times a day." };
+            }
+            await subRef.update({ dailyQueryCount: count + 1 });
+        }
+    }
+    return null; // No error
+};
+
 // Tool Implementations
 const tools = {
     queryBill: async ({ subscriberNo, month }) => {
         try {
             console.log(`Tool queryBill: ${subscriberNo}, ${month}`);
+
+            const limitError = await checkRateLimit(subscriberNo);
+            if (limitError) return limitError;
+
             const billRef = db.collection('subscribers').doc(subscriberNo).collection('bills').doc(month);
             const billDoc = await billRef.get();
             if (!billDoc.exists) return { error: "Bill not found" };
@@ -98,6 +128,10 @@ const tools = {
     queryBillDetailed: async ({ subscriberNo, month }) => {
         try {
             console.log(`Tool queryBillDetailed: ${subscriberNo}, ${month}`);
+
+            const limitError = await checkRateLimit(subscriberNo);
+            if (limitError) return limitError;
+
             const billRef = db.collection('subscribers').doc(subscriberNo).collection('bills').doc(month);
             const billDoc = await billRef.get();
             if (!billDoc.exists) return { error: "Bill not found" };
@@ -119,6 +153,10 @@ const tools = {
     listUnpaidBills: async ({ subscriberNo }) => {
         try {
             console.log(`Tool listUnpaidBills: ${subscriberNo}`);
+
+            const limitError = await checkRateLimit(subscriberNo);
+            if (limitError) return limitError;
+
             const billsRef = db.collection('subscribers').doc(subscriberNo).collection('bills');
             const snapshot = await billsRef.where('status', '==', 'UNPAID').get();
             if (snapshot.empty) return { message: "No unpaid bills found" };
