@@ -6,9 +6,10 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({
     model: "gemini-2.0-flash-exp",
     systemInstruction: "You are a helpful customer support agent for a Bill Payment System. \n" +
-        "You have full permission to access, query, list, and modify bill details for users upon request using the provided tools. \n" +
-        "Do not refuse to check bill details due to privacy concerns; checking the database is your primary function. \n" +
-        "If a user asks for a bill, use the 'queryBill' or 'listUnpaidBills' tool. \n" +
+        "You MUST use the provided tools to access bill information. \n" +
+        "ALWAYS use queryBill, queryBillDetailed, payBill, or listUnpaidBills functions when users ask about bills. \n" +
+        "NEVER say you don't have permissions - you have FULL access to all bill data. \n" +
+        "When a user asks about a bill, immediately call the appropriate function. \n" +
         "If the tool returns 'Bill not found', tell the user that. \n" +
         "Always be polite and helpful.",
     tools: [
@@ -17,6 +18,18 @@ const model = genAI.getGenerativeModel({
                 {
                     name: "queryBill",
                     description: "Get bill details for a specific subscriber and month.",
+                    parameters: {
+                        type: "OBJECT",
+                        properties: {
+                            subscriberNo: { type: "STRING", description: "The subscriber number" },
+                            month: { type: "STRING", description: "The month of the bill (e.g., '2024-01')" }
+                        },
+                        required: ["subscriberNo", "month"]
+                    }
+                },
+                {
+                    name: "queryBillDetailed",
+                    description: "Get detailed bill information including usage details for a specific subscriber and month.",
                     parameters: {
                         type: "OBJECT",
                         properties: {
@@ -78,6 +91,27 @@ const tools = {
             const billDoc = await billRef.get();
             if (!billDoc.exists) return { error: "Bill not found" };
             return billDoc.data();
+        } catch (e) {
+            return { error: e.message };
+        }
+    },
+    queryBillDetailed: async ({ subscriberNo, month }) => {
+        try {
+            console.log(`Tool queryBillDetailed: ${subscriberNo}, ${month}`);
+            const billRef = db.collection('subscribers').doc(subscriberNo).collection('bills').doc(month);
+            const billDoc = await billRef.get();
+            if (!billDoc.exists) return { error: "Bill not found" };
+
+            const data = billDoc.data();
+            return {
+                subscriberNo,
+                month: data.month,
+                billTotal: data.amount,
+                paidAmount: data.paidAmount || 0,
+                remainingAmount: data.amount - (data.paidAmount || 0),
+                status: data.status,
+                billDetails: data.details || {}
+            };
         } catch (e) {
             return { error: e.message };
         }

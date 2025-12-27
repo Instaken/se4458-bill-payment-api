@@ -1,49 +1,192 @@
-# Mobile Provider Bill Payment API - Group 1
-**SE 4458 Software Architecture & Design of Modern Large Scale Systems - Midterm Project**
+# SE 4458 - AI Agent Bill Payment Chat Application
 
-This project is a cloud-native RESTful API designed for a fictitious Mobile Provider system. It allows subscribers to query bills, make payments, and enables admins to manage billing records via single or batch operations.
+> AI-powered chat application for bill payment using Google Gemini AI, Google Cloud Firestore, and Google Cloud API Gateway.
 
-## 🔗 Project Links:
-
-- **Live Swagger Documentation:** https://se4458-api-405686366356.europe-west3.run.app/api-docs
----
-
-## 🏗️ System Design & Architecture
-
-The system is built on a **Serverless Architecture** using Google Cloud Platform (GCP) to ensure scalability and cost-efficiency, suitable for "Large Scale Systems".
-
-### Tech Stack
-* **Runtime:** Node.js (Express.js)
-* **Database:** Google Cloud Firestore (NoSQL - Native Mode)
-* **Hosting:** Google Cloud Run (Serverless Container)
-* **API Gateway:** Google Cloud API Gateway (Traffic Management & Security)
-* **Documentation:** Swagger / OpenAPI 2.0
-
-### Key Design Decisions
-1.  **API Gateway Pattern:** Instead of exposing the backend directly, an API Gateway is used as a single entry point. This handles **Authentication (API Key)** and **Rate Limiting (Quotas)** centrally, offloading these concerns from the application logic.
-2.  **NoSQL Database:** Firestore was chosen over relational databases to handle high-throughput read/write operations and flexible schema requirements typical in billing systems.
-3.  **Stateless Backend:** The application is containerized and stateless, allowing Cloud Run to scale down to zero when idle and scale up automatically during high traffic.
+**Live App**: [Your Gateway URL after deployment]
 
 ---
 
-## 📊 Data Model (ER Diagram)
+## 🚀 Quick Start (5 Minutes)
 
-Since Firestore is a NoSQL document database, the data is structured in **Collections** and **Documents**. We utilized a hierarchical structure to optimize for the "Query by Subscriber" pattern.
+### 1. Get API Keys
 
-```mermaid
-erDiagram
-    SUBSCRIBER ||--o{ BILL : has
-    
-    SUBSCRIBER {
-        string subscriberNo PK "Document ID"
-        int dailyQueryCount "For Rate Limiting"
-        string lastQueryDate "YYYY-MM-DD"
-    }
+- **Gemini API**: https://aistudio.google.com/app/apikey
+- **Firebase**: https://console.firebase.google.com (create project, enable Firestore, download Service Account JSON)
 
-    BILL {
-        string month PK "Document ID (e.g. 2024-11)"
-        float amount "Total Bill Amount"
-        float paidAmount "Amount Paid So Far"
-        string status "PAID or UNPAID"
-        object details "JSON: Data usage, calls etc."
-    }
+### 2. Configure Environment
+
+1. Create a `.env` file in the root directory:
+   ```env
+   GEMINI_API_KEY=your_gemini_key_here
+   GOOGLE_APPLICATION_CREDENTIALS=./firebase-service-account.json
+   NODE_ENV=development
+   ```
+
+2. Save your Firebase service account key as `firebase-service-account.json` in the root directory.
+
+### 3. Add Test Data to Firestore
+
+In Firestore Console, create a document at this path:
+`subscribers/123456/bills/2024-11`
+
+With these fields:
+- `month` (string): "2024-11"
+- `amount` (number): 150
+- `paidAmount` (number): 0
+- `status` (string): "UNPAID"
+- `details` (map): `{ dataUsage: "10 GB", callMinutes: 200, smsCount: 50 }`
+
+### 4. Run Application (Locally)
+
+The project includes a helper script to start both the backend and frontend servers:
+
+```bash
+# This script handles dependency installation and starts both servers
+./dev.sh
+```
+
+- **Backend**: http://localhost:8080
+- **Frontend**: http://localhost:3000
+- **Swagger Docs**: http://localhost:8080/api-docs
+
+---
+
+## ☁️ Deployment to Google Cloud
+
+The project includes a comprehensive deployment script `deploy.sh` that automates the deployment to Cloud Run and updates the API Gateway.
+
+### Prerequisites
+- Google Cloud CLI installed and authenticated (`gcloud auth login`, `gcloud config set project PROJECT_ID`)
+- Gemini API Key stored in Google Cloud Secret Manager (the script will prompt if missing)
+
+### One-Click Deployment
+
+```bash
+./deploy.sh
+```
+
+**What this script does:**
+1. specific checks for required secrets.
+2. Updates `api-gateway-config.yaml` with the latest backend URL.
+3. Deploys the Backend (Node.js/Express) to **Cloud Run**.
+4. Creates a new API Gateway configuration.
+5. Updates the **API Gateway** to point to the new deployment.
+
+### Architecture Notes
+- The **Frontend** is built and served statically by the Backend in production (`NODE_ENV=production`), so you only need to deploy the backend service.
+- The **Gateway** manages authentication and routing.
+
+---
+
+## 📁 Project Structure
+
+```
+├── src/                    # Backend Source Code
+│   ├── app.js             # Express App Setup
+│   ├── controllers/       # Route Logic (Chat, Bills, Admin)
+│   ├── routes/            # API Route Definitions
+│   ├── middleware/        # Auth & Logging Middleware
+│   └── config/            # Firebase & App Config
+├── frontend/              # Frontend Source Code
+│   ├── src/               # React Components
+│   └── vite.config.js     # Vite Configuration
+├── api-gateway-config.yaml # Google Cloud API Gateway Spec
+├── deploy.sh              # Automated Deployment Script
+├── dev.sh                 # Local Development Script
+├── index.js               # Application Entry Point
+└── package.json           # Backend Dependencies
+```
+
+---
+
+## 🏗️ Architecture
+
+```
+User → React Frontend (served via API Gateway) → API Gateway → Express Backend → Gemini AI
+                                                                             → Firestore DB
+```
+
+**Key Features:**
+- **AI Chat**: Natural language processing with Gemini 2.0 Flash for understanding user intent.
+- **API Gateway**: Centralized entry point handling path routing and security.
+- **Firestore**: Real-time NoSQL database for subscriber and bill data.
+- **Cloud Run**: Serverless container hosting for the application logic.
+
+---
+
+## 🎯 Features
+
+- ✅ **Natural Language Interface**: Ask "How much is my bill?" or "Pay my bill".
+- ✅ **AI Intent Recognition**: Automatically detects if user wants to Query, Pay, or see Details.
+- ✅ **Secure Payments**: Transactional updates to Firestore.
+- ✅ **Detailed Breakdown**: View data usage, call minutes, and SMS details.
+- ✅ **Modern Dashboard**: Responsive React-based UI with dark mode support.
+- ✅ **Swagger Documentation**: Interactive API testing ui.
+
+---
+
+## 📝 API Endpoints
+
+### Chat (Main)
+```http
+POST /chat
+{
+  "message": "Pay my bill for subscriber 123456",
+  "history": []
+}
+```
+
+### Bills Management
+- `POST /api/v1/bills/query`: Get bill status
+- `POST /api/v1/bills/pay`: Process payment (Atomic transaction)
+
+### Documentation
+Access the full Swagger documentation at `/api-docs` when running locally.
+
+---
+
+## 🧪 Testing Scenarios
+
+1. **Query Bill**: "What is the bill for subscriber 123456?"
+2. **Details**: "Show me the details for this month."
+3. **Payment**: "Id like to pay 50 TL."
+4. **Context Maintenance**: The AI maintains context, so you can ask follow-up questions like "is it paid yet?"
+
+---
+
+## 👥 Team
+
+**Group 1 - Mobile Provider Bill Payment System**
+
+- ÜLKÜ BARTU SERBEST
+- AYSİMA ADATEPE
+- ELİF EMİNE GÜNAL
+- IRMAK ARABACI
+- DİLARA ACAR
+- AHMET KEMAL BİLİCİLER
+- YAĞMUR SABIRLI
+- OZAN BÖCE
+- MURAT HABİP OKAN
+- MELİKE AYTAÇ
+- MELİSA DEMİRBAŞ
+- PELİN DUMAN
+- SELÇUK SUAT SAYIN
+- DEFNE TEKYİĞİT
+- LARA ÖZDUMAN
+- DURU GENCAY
+
+---
+
+## 📚 Tech Stack
+
+- **Frontend**: React 18, Vite, Lucide React
+- **Backend**: Node.js, Express.js
+- **AI**: Google Gemini 2.0 Flash (`@google/generative-ai`)
+- **Database**: Google Cloud Firestore (`firebase-admin`)
+- **Infrastructure**: Google Cloud Run, API Gateway, Secret Manager
+
+---
+
+## 📄 License
+
+Educational project for SE 4458 course.

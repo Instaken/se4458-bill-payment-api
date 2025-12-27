@@ -60,14 +60,27 @@ app.use('/api/v1/bills', mobileProviderRoutes);
 app.use('/api/v1/bills', bankingRoutes);
 app.use('/api/v1/bills', adminRoutes);
 
-// Chat Route (Optional: Protected or Public? User requested "API_KEY to add auth to endpoints")
-// Let's protect it too for consistency, or the UI won't work easily without the key.
-// But the UI is static HTML.
-app.use('/chat', authMiddleware, chatRoutes);
+// Chat Route (API Gateway handles authentication)
+app.use('/chat', chatRoutes);
 
-app.get('/', (req, res) => {
-    // Send the Chat UI file
-    res.sendFile(path.join(__dirname, '../public/index.html'));
-});
+// Serve frontend based on environment
+if (process.env.NODE_ENV === 'production') {
+    // Production: Serve React build from frontend/dist
+    const frontendDistPath = path.join(__dirname, '../frontend/dist');
+    app.use(express.static(frontendDistPath));
+
+    app.get('/', (req, res) => {
+        res.sendFile(path.join(frontendDistPath, 'index.html'));
+    });
+} else {
+    // Development: React runs on separate Vite server (port 3000)
+    // Backend just provides APIs on port 8080
+    app.get('/', (req, res) => {
+        res.json({
+            message: 'Backend API running. Frontend is at http://localhost:3000',
+            swagger: 'http://localhost:8080/api-docs'
+        });
+    });
+}
 
 module.exports = app;

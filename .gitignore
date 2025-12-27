@@ -1,4 +1,11 @@
-node_modules
-key.txt
+node_modules/
 .env
-DS_Store    
+firebase-service-account.json
+*.log
+.DS_Store
+uploads/*
+!uploads/.gitkeep
+dist/
+build/
+.vscode/
+.idea/
